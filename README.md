@@ -1,4 +1,4 @@
-# FirstName LastName
+# Sébastien Bouquete
 
 ## Protocol Description
 This is where you describe the protocol you implemented.
