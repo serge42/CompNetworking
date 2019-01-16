@@ -1,0 +1,19 @@
+apply plugin: 'java'
+
+
+repositories {
+    flatDir {
+        dirs 'lib'
+    }
+}
+dependencies {
+    compile name: 'simplenet'
+}
+
+jar {
+    manifest {
+        attributes (
+            'Main-Class': 'Main'
+        )
+    }
+}

@@ -1,0 +1,16 @@
+This implementation is able to solve A and CNAME queries both recursively and iteratively. 
+The implementation is made Object Oriented with a main class being LocalDNS.
+The implementation of the Cache has been made in another class called Cache which holds instances of CacheEntries
+to simplify the computation of the expiration of the chached records.
+
+The LocalDNS contains three different caches for A queries, CNAME quesries and NS queries and uses the Parser classes 
+founrnised during the course. A few modifications have been implemented in the DNS class :
+ - modification of the length of the data buffer to accept queries ending with a point (.) since they are valid DNS queries.
+ - Addition of addAllAnswers and addAllAdditionnal methods to simplify the copy of collection of data
+ - Addition of a "clone" method (and implementation of the Clonnable interface) to permit copies of DNS objects.
+
+Limitations:
+- The LocalDNS cannot correctly resolve iterative NS queries if the queries are cached in the CNAMECache, since it first needs to resolve
+  the cannonical name of the query.
+- Many Exceptions are ignored.
+- During iterative queries, some information could be retreived from cache but are not (like the NS servers for TLDs, etc.)
