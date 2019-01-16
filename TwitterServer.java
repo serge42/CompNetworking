@@ -19,7 +19,11 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
 /**
- * TODO
+ * The TwitterServer class is an implementation of a server that let users
+ * create, subscribe and unsubscribe to hashtags. The users can also post
+ * one-line messages; if a message contains a hashtag to which another user is
+ * subscribed, the message will be transfered by this server to the subscribed
+ * user.
  */
 public class TwitterServer implements Runnable {
     private ServerSocket serverSocket;
@@ -33,8 +37,9 @@ public class TwitterServer implements Runnable {
             + " - UNSUBSCRIBE #<hashtag> [#hashtag...], \n - TWEET <one-line msg>";
 
     /**
-     * TwitterServer constructor, requires a ServerSocket. 
-     * Initializes the crntSubscriptions Map.
+     * TwitterServer constructor, requires a ServerSocket. Initializes the
+     * crntSubscriptions Map.
+     * 
      * @param ss SokcetServer
      */
     public TwitterServer(ServerSocket ss) {
@@ -43,32 +48,30 @@ public class TwitterServer implements Runnable {
     }
 
     /**
-     * TODO
+     * The main method of the TwitterServer which accepts connections from a client
+     * and then wait to receive one of the accepted commands. Accepted commands are
+     * "SUBSCRIBE", "UNSUBSCRIBE" and "TWEET".
      */
     public void run() {
         while (true) {
             try {
                 Socket s = serverSocket.accept();
                 InetAddress inetAddr = s.getInetAddress();
-                // syncPrintln("connection accepted from: " + inetAddr.toString());
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(s.getInputStream()));
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
-                // Used to easily remove subscriptions when the
-                // client disconnect.
+                // Used to easily remove subscriptions when the client disconnect.
                 Set<String> subs = new HashSet<>();
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    // Make a list of all hashtags in the message (here, since it is used in every
-                    // case).
+                    // Make a set of all the hashtags in the message.
                     Set<String> msgHashtags = Arrays.stream(line.split(" "))
                             .filter(word -> word.startsWith("#") && word.length() > 1).collect(Collectors.toSet());
 
-                    if (line.startsWith("SUBSCRIBE")) {
-                        // syncPrintln("Subscription received");
-                        addSubscription(msgHashtags, subs, writer);
-                    } else if (line.startsWith("UNSUBSCRIBE")) {
-                        // syncPrintln("Unsubscription received");
+                    if (line.startsWith("SUBSCRIBE ")) {
+                        addSubscription(msgHashtags, writer);
+                        subs.addAll(msgHashtags);
+                    } else if (line.startsWith("UNSUBSCRIBE ")) {
                         // Remove client from hashtag's list of subscibers (if present, otherwise do
                         // nothing)
                         msgHashtags.forEach(h -> {
@@ -80,27 +83,19 @@ public class TwitterServer implements Runnable {
                             }
                         });
                     } else if (line.startsWith("TWEET ")) {
-                        // syncPrintln("Tweet received");
                         // First prepare the message to transfer to subscribers
-                        // String tweet = line.replaceFirst("TWEET", "Tweet received from " + inetAddr +
-                        // ": ");
-                        String tweet = line.replaceFirst("TWEET ", "");
+                        String tweet = line.replaceFirst("TWEET ", "").trim();
                         syncPrintln(tweet);
                         transferTweet(tweet, msgHashtags, writer);
-
                     }
                     // The "UNKNOWN CMD" reply was removed because assignment specifications
-                    // precised to
-                    // not add supplementary outputs
+                    // precised not to add supplementary outputs
                     /*
                      * else { synchronized (writer) { try { writer.write(UNKNOWN_CMD);
                      * writer.newLine(); writer.flush(); } catch (IOException e) {
                      * System.out.println(e); } } }
                      */
                 }
-
-                // syncPrintln("Connection closed by: " + inetAddr);
-                // removeFromSubs(subs, writer);
                 // Removing disconnected client from all its subscriptions
                 subs.forEach(h -> crntSubscriptions.get(h).remove(writer));
                 reader.close();
@@ -112,22 +107,19 @@ public class TwitterServer implements Runnable {
         }
     }
 
-    // UNUSED
-    private void removeFromSubs(Set<String> subs, BufferedWriter wr) {
-        subs.forEach(h -> {
-            crntSubscriptions.get(h).remove(wr);
-        });
-    }
-
     /**
-     * This method transfer a received tweet to all the client subscribe to at least one of the hashtags contained in the msgHashtags parameter.
-     * A tweet is not transfered to its creator even if it is subscribe to one of the hashtags.
-     * A tweet is never transfered more than once to a given client even if the said client is subscribe to multiple hashtags contained int
-     * msgHashtags.
+     * This method transfers a received tweet to every client subscribed to at least
+     * one of the hashtags contained in the msgHashtags parameter. A tweet is not
+     * transfered to its creator even if it is subscribed to one of the hashtags. A
+     * tweet is never transfered more than once to a given client even if the said
+     * client is subscribed to multiple hashtags contained in msgHashtags.
      * 
-     * @param tweet the message of the TWEET command the creator used to create the tweet.
-     * @param msgHashtags a set containing every hashtags of the tweet; an hashtag is a word starting with the '#' character with length > 1.
-     * @param writer the BufferedWriter used by the server to communicate with the tweet creator.
+     * @param tweet       the message of the TWEET command the creator used to
+     *                    create the tweet.
+     * @param msgHashtags a set containing every hashtags of the tweet; an hashtag
+     *                    is a word starting with the '#' character with length > 1.
+     * @param writer      the BufferedWriter used by the server to communicate with
+     *                    the tweet creator.
      */
     private void transferTweet(String tweet, Set<String> msgHashtags, BufferedWriter writer) {
         Set<BufferedWriter> alreadyReceived = new HashSet<>();
@@ -156,13 +148,14 @@ public class TwitterServer implements Runnable {
     // Add client into hashtag's list of subscribers. A client can subscribe to
     // multiple Hashtags in one command.
     /**
-     * TODO
+     * Add a client's BufferedWriter to the set of subscribers of every hashtag in
+     * msgHashtags.
      * 
-     * @param msgHashtags
-     * @param subs
-     * @param writer
+     * @param msgHashtags set containing the hashtags to which the client wants to
+     *                    subscribe
+     * @param writer      writer used to communicate with the client
      */
-    private void addSubscription(Set<String> msgHashtags, Set<String> subs, BufferedWriter writer) {
+    private void addSubscription(Set<String> msgHashtags, BufferedWriter writer) {
         msgHashtags.forEach(h -> {
             synchronized (crntSubscriptions) {
                 if (crntSubscriptions.containsKey(h)) {
@@ -171,14 +164,13 @@ public class TwitterServer implements Runnable {
                     crntSubscriptions.put(h, new HashSet<>(Arrays.asList(writer)));
                 }
             }
-            subs.add(h);
         });
     }
 
     /**
-     * TODO
+     * This method synchronizes calls to System.out.println.
      * 
-     * @param msg
+     * @param msg the msg to be printed.
      */
     private void syncPrintln(String msg) {
         synchronized (System.out) {
@@ -187,9 +179,12 @@ public class TwitterServer implements Runnable {
     }
 
     /**
-     * TODO
+     * This main method create a ServerSocket to the port passed as an argument,
+     * then start a bunch of threads (the number of thread is defined by the
+     * constant NB_THREADS) running the TwitterServer's run method.
      * 
-     * @param args
+     * @param args the first argument MUST be the port on which the server should
+     *             listen. Other aguments will be ignored.
      */
     public static void main(String[] args) {
         String usage = "Usage: ./server <LISTEN_PORT>" + " where <LISTEN_PORT> is an integer";

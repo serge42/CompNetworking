@@ -14,13 +14,16 @@ import java.io.Writer;
 import java.net.InetAddress;
 
 /**
- * TODO
+ * This class implements a client that can connect to a TwitterServer and send
+ * strings to it while simultaneously listening for messages coming from the
+ * server.
  */
 public class TwitterClient {
 
-    private Scanner scan; // TODO
-    private Socket socket; //TODO
-    // TODO
+    private Scanner scan; // Scanner object used to read user inputs
+    private Socket socket; // Socket object used to receive and send strings to the server
+    // Runnable waiting for messages from the server and printing them to standard
+    // output.
     private Runnable listener = () -> {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -37,18 +40,19 @@ public class TwitterClient {
     };
 
     /**
-     * TODO
-     * @param s
+     * The TwitterClient constructor which initializes the Scanner and saves an
+     * instance of Socket.
+     * 
+     * @param s an instance of Socket that is connected to a TwitterServer.
      */
     public TwitterClient(Socket s) {
         this.scan = new Scanner(System.in);
         this.socket = s;
     }
 
-    // Scan user input line, sends it to the server then wait for next input.
-    // Could also be a runnable but it's unecessary.
     /**
-     * TODO
+     * This method reads user's input from standard input one line at a time and
+     * then sends the line to the TwitterServer.
      */
     public void sender() {
         try {
@@ -65,9 +69,10 @@ public class TwitterClient {
     }
 
     /**
-     * TODO
+     * This method quit the TwitterClient when the connection with the server has
+     * been lost.
      * 
-     * @throws IOException
+     * @throws IOException throws the IOException that may come from Socket.close().
      */
     private void quit() throws IOException {
         System.err.println("Connection lost with server, exiting.");
@@ -76,9 +81,12 @@ public class TwitterClient {
     }
 
     /**
-     * TODO
+     * This main method creates a Socket connected to the server's hostname and port
+     * passed as arguments. It then creates an instance of TwitterClient and starts
+     * its listener in a new thread.
      * 
-     * @param args
+     * @param args first argument must be the server hostname or IP, second argument
+     *             must be the server port, additional arguments are ignored.
      */
     public static void main(String[] args) {
         if (args.length != 2) {
@@ -87,9 +95,9 @@ public class TwitterClient {
         }
 
         String serverHostname = args[0];
-        int serverPort = Integer.parseInt(args[1]);
-
         try {
+            int serverPort = Integer.parseInt(args[1]);
+
             Socket s = new Socket(InetAddress.getByName(serverHostname), serverPort);
             TwitterClient tc = new TwitterClient(s);
             Thread tl = new Thread(tc.listener);
@@ -98,6 +106,9 @@ public class TwitterClient {
 
             tl.join();
             s.close();
+        } catch (NumberFormatException nfe) {
+            System.err.println("SERVER_PORT must be an integer");
+            System.exit(1);
         } catch (Exception e) {
             System.err.println(e);
         }
